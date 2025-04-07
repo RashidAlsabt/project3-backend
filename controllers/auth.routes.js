@@ -7,7 +7,7 @@ const verifyToken = require("../middleware/verify-token")
 // register company
 router.post("/register", async (req, res) => {
   try {
-    const { companyName, email, password, salary } = req.body
+    const { company_name, email, password, salary } = req.body
 
     const foundCompany = await Company.findOne({ email })
     if (foundCompany) {
@@ -15,7 +15,7 @@ router.post("/register", async (req, res) => {
     }
 
     const createdCompany = await Company.create({
-      companyName,
+      company_name,
       email,
       password, 
       salary,
@@ -66,7 +66,7 @@ router.get("/verify", verifyToken, (req, res) => {
 // gets new name from form, checks current company id and changes it
 router.put("/update-name", verifyToken, async (req, res) => {
   try {
-    const { companyName } = req.body
+    const { company_name } = req.body
 
     const updated = await Company.findByIdAndUpdate(
       req.user._id,
