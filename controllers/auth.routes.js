@@ -3,6 +3,7 @@ const router = express.Router()
 const Company = require("../models/Company")
 const jwt = require("jsonwebtoken")
 const verifyToken = require("../middleware/verify-token")
+const bcrypt = require("bcrypt")
 
 // register company
 router.post("/register", async (req, res) => {
@@ -13,11 +14,11 @@ router.post("/register", async (req, res) => {
     if (foundCompany) {
       return res.status(400).json({ err: "Email already registered" })
     }
-
+    console.log(bcrypt.hashSync(password,12))
     const createdCompany = await Company.create({
       company_name,
       email,
-      password, 
+      password: bcrypt.hashSync(password,12), 
       salary,
     })
 
