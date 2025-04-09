@@ -2,17 +2,18 @@ const router = require('express').Router()
 const verifyToken = require("../middleware/verify-token")
 const Transaction = require('../models/Transaction')
 
-router.get("/", async (req, res) => {
+router.get("/:page/:limit", async (req, res) => {
     try {
-        const page = parseInt(req.body.page) || 1
-        const limit = parseInt(req.body.limit) || 10
+        const page = parseInt(req.params.page) || 1
+        const limit = parseInt(req.params.limit) || 10
         const skipRecords = (page - 1) * limit
 
         const totalRecords = await Transaction.countDocuments()
 
         const getTransactions = await Transaction.find().populate([
             "category_id",
-            "payment_id"
+            "payment_id",
+            "company_id"
         ]).skip(skipRecords).limit(limit)
 
         const totalPages = Math.ceil(totalRecords / limit)

@@ -2,13 +2,13 @@ const {Schema, model} = require("mongoose")
 
 const transactionSchema = new Schema({
     company_id: {
-        type: Number,
-        required:[ true, "Company ID is requried" ],
-        trim:true
+        type: Schema.Types.ObjectId,
+        required:[true,"Company is required"],
+        ref:"Company"
     },
     category_id:{
         type: Schema.Types.ObjectId,
-        required:[true,"Payment is required"],
+        required:[true,"Category is required"],
         ref:"Category"
     },
     payment_id:{
