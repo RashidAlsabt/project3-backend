@@ -42,7 +42,7 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ err: "Email not registered" })
     }
 
-    const isMatch = password === foundCompany.password
+    const isMatch = bcrypt.compareSync(password, foundCompany.password)
     if (!isMatch) {
       return res.status(401).json({ err: "Email or password incorrect" })
     }

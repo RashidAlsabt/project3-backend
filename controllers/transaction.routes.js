@@ -1,6 +1,6 @@
 const router = require('express').Router()
 const verifyToken = require("../middleware/verify-token")
-const Transaction = require('../models/transaction')
+const Transaction = require('../models/Transaction')
 
 router.get("/", async (req, res) => {
     try {
