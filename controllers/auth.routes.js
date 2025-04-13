@@ -14,11 +14,13 @@ router.post("/register", async (req, res) => {
     if (foundCompany) {
       return res.status(400).json({ err: "Email already registered" })
     }
-    console.log(bcrypt.hashSync(password,12))
+
+    const hashedPassword = bcrypt.hashSync(password, 12)
+
     const createdCompany = await Company.create({
       company_name,
       email,
-      password: bcrypt.hashSync(password,12), 
+      password: hashedPassword,
       salary,
     })
 
@@ -27,19 +29,22 @@ router.post("/register", async (req, res) => {
 
     res.status(201).json(companyData)
   } catch (error) {
-    console.error("Error in /register:", error.message)
     res.status(500).json({ err: "Something went wrong" })
   }
 })
 
-// takes request, checks if name is there and compares password
-//then it signs the jwt and returns
+// login company
 router.post("/login", async (req, res) => {
   const { email, password } = req.body
+
   try {
     const foundCompany = await Company.findOne({ email })
     if (!foundCompany) {
       return res.status(401).json({ err: "Email not registered" })
+    }
+
+    if (!foundCompany.password) {
+      return res.status(500).json({ err: "No password found for this user" })
     }
 
     const isMatch = bcrypt.compareSync(password, foundCompany.password)
@@ -54,21 +59,18 @@ router.post("/login", async (req, res) => {
 
     res.status(200).json({ token })
   } catch (error) {
-    res.status(500).json(error)
+    res.status(500).json({ err: "Internal server error" })
   }
 })
 
-// checks token
+// verify token
 router.get("/verify", verifyToken, (req, res) => {
-  console.log(req.user)
   res.json(req.user)
 })
 
-// gets new name from form, checks current company id and changes it
+// update company name
 router.put("/update-name", verifyToken, async (req, res) => {
   try {
-    const { company_name } = req.body
-
     const updated = await Company.findByIdAndUpdate(
       req.user._id,
       req.body,
@@ -81,8 +83,7 @@ router.put("/update-name", verifyToken, async (req, res) => {
   }
 })
 
-
-// deletes account
+// delete account
 router.delete("/delete-account", verifyToken, async (req, res) => {
   try {
     await Company.findByIdAndDelete(req.user._id)
