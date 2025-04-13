@@ -17,6 +17,52 @@ router.get("/:page/:limit", async (req, res) => {
         ]).skip(skipRecords).limit(limit)
 
         const totalPages = Math.ceil(totalRecords / limit)
+        
+        let totalSpendedAmount = 0.0
+        getTransactions.forEach((value) => {
+            totalSpendedAmount += parseFloat(value.amount)
+        })
+
+        const categorySpendMap = new Map()
+
+        getTransactions.forEach(tx => {
+            const category = tx.category_id?._id?.toString()
+            const amount = parseFloat(tx.amount) || 0
+
+            if (category) {
+                if (categorySpendMap.has(category)) {
+                    categorySpendMap.get(category).total += amount
+                } else {
+                    categorySpendMap.set(category, {
+                        category_id: tx.category_id._id,
+                        category_name: tx.category_id.name,
+                        total: parseFloat(amount)
+                    })
+                }
+            }
+        })
+
+        const paymentUsageMap = new Map()
+
+        getTransactions.forEach(tx => {
+            const payment = tx.payment_id?._id?.toString()
+
+            if (payment) {
+                if (paymentUsageMap.has(payment)) {
+                    paymentUsageMap.get(payment).count += 1
+                } else {
+                    paymentUsageMap.set(payment, {
+                        payment_id: tx.payment_id._id,
+                        payment_name: tx.payment_id.name,
+                        count: 1
+                    })
+                }
+            }
+        })
+
+        const paymentUsageArray = Array.from(paymentUsageMap.values())
+        const categorySpendArray = Array.from(categorySpendMap.values())
+        
 
         res.status(201).json({
             data: getTransactions,
@@ -25,8 +71,83 @@ router.get("/:page/:limit", async (req, res) => {
                 totalPages: totalPages,
                 totalRecords: totalRecords,
                 limit: limit,
+            },
+            chartsDetails: {
+                totalSpendedAmount: totalSpendedAmount,
+                categories: categorySpendArray,
+                payments: paymentUsageArray
             }
         })
+
+    } catch (error) {
+        res.status(500).json({err:error})
+    }
+})
+
+router.get("/graph-details", async (req, res) => {
+    try {
+        const totalRecords = await Transaction.countDocuments()
+
+        const getTransactions = await Transaction.find().populate([
+            "category_id",
+            "payment_id",
+            "company_id"
+        ])
+        
+        let totalSpendedAmount = 0.0
+        getTransactions.forEach((value) => {
+            totalSpendedAmount += parseFloat(value.amount)
+        })
+
+        const categorySpendMap = new Map()
+
+        getTransactions.forEach(tx => {
+            const category = tx.category_id?._id?.toString()
+            const amount = parseFloat(tx.amount) || 0
+
+            if (category) {
+                if (categorySpendMap.has(category)) {
+                    categorySpendMap.get(category).total += amount
+                } else {
+                    categorySpendMap.set(category, {
+                        category_id: tx.category_id._id,
+                        category_name: tx.category_id.name,
+                        total: parseFloat(amount)
+                    })
+                }
+            }
+        })
+
+        const paymentUsageMap = new Map()
+
+        getTransactions.forEach(tx => {
+            const payment = tx.payment_id?._id?.toString()
+
+            if (payment) {
+                if (paymentUsageMap.has(payment)) {
+                    paymentUsageMap.get(payment).count += 1
+                } else {
+                    paymentUsageMap.set(payment, {
+                        payment_id: tx.payment_id._id,
+                        payment_name: tx.payment_id.name,
+                        count: 1
+                    })
+                }
+            }
+        })
+
+        const paymentUsageArray = Array.from(paymentUsageMap.values())
+        const categorySpendArray = Array.from(categorySpendMap.values())
+        
+
+        res.status(201).json({
+            chartsDetails: {
+                totalSpendedAmount: totalSpendedAmount,
+                categories: categorySpendArray,
+                payments: paymentUsageArray
+            }
+        })
+
     } catch (error) {
         res.status(500).json({err:error})
     }
