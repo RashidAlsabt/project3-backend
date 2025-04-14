@@ -155,7 +155,11 @@ router.get("/graph-details", async (req, res) => {
 
 router.get("/:transactionId", async (req, res) => {
     try{
-        const foundTransaction = await Transaction.findById(req.params.transactionId)
+        const foundTransaction = await Transaction.findById(req.params.transactionId).populate([
+            "category_id",
+            "payment_id",
+            "company_id"
+        ])
         console.log(foundTransaction)
 
         res.status(201).json(foundTransaction)
