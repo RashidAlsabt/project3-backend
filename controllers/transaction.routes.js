@@ -1,20 +1,24 @@
 const router = require('express').Router()
 const verifyToken = require("../middleware/verify-token")
 const Transaction = require('../models/Transaction')
+const jwt = require("jsonwebtoken")
 
 router.get("/:page/:limit", async (req, res) => {
     try {
+        const token = req.header('Authorization')?.replace('Bearer ', '')
+        const decoded = jwt.verify(token, process.env.JWT_SECRET)
+        req.user = decoded
+
         const page = parseInt(req.params.page) || 1
         const limit = parseInt(req.params.limit) || 10
         const skipRecords = (page - 1) * limit
 
         const totalRecords = await Transaction.countDocuments()
 
-        const getTransactions = await Transaction.find().populate([
-            "category_id",
-            "payment_id",
-            "company_id"
-        ]).skip(skipRecords).limit(limit)
+        const getTransactions = await Transaction.find()
+            .populate(["category_id", "payment_id", "company_id"])
+            .skip(skipRecords)
+            .limit(limit)
 
         const totalPages = Math.ceil(totalRecords / limit)
         
@@ -24,7 +28,6 @@ router.get("/:page/:limit", async (req, res) => {
         })
 
         const categorySpendMap = new Map()
-
         getTransactions.forEach(tx => {
             const category = tx.category_id?._id?.toString()
             const amount = parseFloat(tx.amount) || 0
@@ -36,14 +39,13 @@ router.get("/:page/:limit", async (req, res) => {
                     categorySpendMap.set(category, {
                         category_id: tx.category_id._id,
                         category_name: tx.category_id.name,
-                        total: parseFloat(amount)
+                        total: parseFloat(amount),
                     })
                 }
             }
         })
 
         const paymentUsageMap = new Map()
-
         getTransactions.forEach(tx => {
             const payment = tx.payment_id?._id?.toString()
 
@@ -54,7 +56,7 @@ router.get("/:page/:limit", async (req, res) => {
                     paymentUsageMap.set(payment, {
                         payment_id: tx.payment_id._id,
                         payment_name: tx.payment_id.name,
-                        count: 1
+                        count: 1,
                     })
                 }
             }
@@ -62,10 +64,11 @@ router.get("/:page/:limit", async (req, res) => {
 
         const paymentUsageArray = Array.from(paymentUsageMap.values())
         const categorySpendArray = Array.from(categorySpendMap.values())
-        
+
+        const finalTransList = getTransactions.filter((value) => value.company_id._id.toString() === decoded.payload._id)
 
         res.status(201).json({
-            data: getTransactions,
+            data: finalTransList,
             pagination: {
                 page: page,
                 totalPages: totalPages,
@@ -75,17 +78,22 @@ router.get("/:page/:limit", async (req, res) => {
             chartsDetails: {
                 totalSpendedAmount: totalSpendedAmount,
                 categories: categorySpendArray,
-                payments: paymentUsageArray
+                payments: paymentUsageArray,
             }
         })
 
     } catch (error) {
-        res.status(500).json({err:error})
+        res.status(500).json({ err: error.message })
     }
 })
 
+
 router.get("/graph-details", async (req, res) => {
     try {
+        const token = req.header('Authorization')?.replace('Bearer ', '')
+        const decoded = jwt.verify(token, process.env.JWT_SECRET)
+        req.user = decoded
+        
         const totalRecords = await Transaction.countDocuments()
 
         const getTransactions = await Transaction.find().populate([
@@ -93,15 +101,17 @@ router.get("/graph-details", async (req, res) => {
             "payment_id",
             "company_id"
         ])
+
+        const finalTransList = getTransactions.filter((value) => value.company_id._id.toString() === decoded.payload._id)
         
         let totalSpendedAmount = 0.0
-        getTransactions.forEach((value) => {
+        finalTransList.forEach((value) => {
             totalSpendedAmount += parseFloat(value.amount)
         })
 
         const categorySpendMap = new Map()
 
-        getTransactions.forEach(tx => {
+        finalTransList.forEach(tx => {
             const category = tx.category_id?._id?.toString()
             const amount = parseFloat(tx.amount) || 0
 
@@ -120,7 +130,7 @@ router.get("/graph-details", async (req, res) => {
 
         const paymentUsageMap = new Map()
 
-        getTransactions.forEach(tx => {
+        finalTransList.forEach(tx => {
             const payment = tx.payment_id?._id?.toString()
 
             if (payment) {
